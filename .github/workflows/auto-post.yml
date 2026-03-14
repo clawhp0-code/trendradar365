@@ -15,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN }}
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -52,13 +52,13 @@ jobs:
           규칙:
           - category는 반드시 "테크" 또는 "라이프스타일" 중 하나
           - slug는 오늘 날짜(${today})로 시작, 영문 소문자와 하이픈만 사용
-          - thumbnail은 Unsplash의 실제 존재할 가능성이 높은 URL 사용
+          - thumbnail은 Unsplash의 실제 존재할 가능성이 높은 URL 사용 (가급적 일반적인 키워드 조합 피할 것)
           - price는 한국 원화 형식
           - content는 최소 300자의 한국어 마크다운
           - 3개 모두 서로 다른 카테고리/분야에서 선택`;
 
           const requestBody = JSON.stringify({
-            model: "claude-opus-4-6",
+            model: "claude-3-opus-20240229",
             max_tokens: 4096,
             messages: [{ role: "user", content: prompt }],
           });
@@ -158,9 +158,3 @@ jobs:
           git add content/posts/
           git commit -m "🤖 Daily trend posts: $(date +'%Y-%m-%d')"
           git push
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: No new posts
-        if: steps.changes.outputs.no_changes == 'true'
-        run: echo "No new posts to commit today."
