@@ -1,0 +1,166 @@
+name: Daily Auto Post
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # 매일 00:00 UTC
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  generate-posts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate trending posts via Claude API
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          node - << 'NODEJS_SCRIPT'
+          const https = require("https");
+          const fs = require("fs");
+          const path = require("path");
+
+          const today = new Date().toISOString().split("T")[0];
+
+          const prompt = `오늘(${today}) 기준으로 전 세계에서 가장 트렌딩한 소비자 제품 3개를 큐레이션해주세요.
+          각 제품에 대해 반드시 아래 JSON 배열 형식으로만 응답하세요. 마크다운 코드블록 없이 순수 JSON만 출력하세요.
+
+          [
+            {
+              "slug": "YYYY-MM-DD-product-slug",
+              "title": "제품명 — 한 줄 캐치프레이즈",
+              "category": "테크 또는 라이프스타일",
+              "thumbnail": "https://images.unsplash.com/photo-XXXXXXXXXX?w=800&q=80",
+              "price": "₩XXX,000",
+              "buyLink": "https://구매링크",
+              "summary": "2-3문장의 한국어 요약",
+              "content": "## 제목\n\n본문 마크다운 내용 (최소 300자, 한국어, 이모지 포함)"
+            }
+          ]
+
+          규칙:
+          - category는 반드시 "테크" 또는 "라이프스타일" 중 하나
+          - slug는 오늘 날짜(${today})로 시작, 영문 소문자와 하이픈만 사용
+          - thumbnail은 Unsplash의 실제 존재할 가능성이 높은 URL 사용
+          - price는 한국 원화 형식
+          - content는 최소 300자의 한국어 마크다운
+          - 3개 모두 서로 다른 카테고리/분야에서 선택`;
+
+          const requestBody = JSON.stringify({
+            model: "claude-opus-4-6",
+            max_tokens: 4096,
+            messages: [{ role: "user", content: prompt }],
+          });
+
+          const options = {
+            hostname: "api.anthropic.com",
+            path: "/v1/messages",
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": process.env.ANTHROPIC_API_KEY,
+              "anthropic-version": "2023-06-01",
+              "Content-Length": Buffer.byteLength(requestBody),
+            },
+          };
+
+          const req = https.request(options, (res) => {
+            let data = "";
+            res.on("data", (chunk) => (data += chunk));
+            res.on("end", () => {
+              try {
+                const response = JSON.parse(data);
+                if (!response.content || !response.content[0]) {
+                  console.error("Invalid API response:", data);
+                  process.exit(1);
+                }
+
+                const text = response.content[0].text.trim();
+                // Extract JSON if wrapped in code block
+                const jsonMatch = text.match(/\[[\s\S]*\]/);
+                if (!jsonMatch) {
+                  console.error("No JSON array found in response:", text);
+                  process.exit(1);
+                }
+
+                const posts = JSON.parse(jsonMatch[0]);
+                const postsDir = path.join(process.cwd(), "content", "posts");
+
+                if (!fs.existsSync(postsDir)) {
+                  fs.mkdirSync(postsDir, { recursive: true });
+                }
+
+                let created = 0;
+                for (const post of posts) {
+                  const filePath = path.join(postsDir, `${post.slug}.md`);
+                  if (fs.existsSync(filePath)) {
+                    console.log(`Skipping existing: ${post.slug}`);
+                    continue;
+                  }
+
+                  const frontmatter = [
+                    "---",
+                    `title: "${post.title.replace(/"/g, '\\"')}"`,
+                    `date: "${today}"`,
+                    `category: "${post.category}"`,
+                    `thumbnail: "${post.thumbnail}"`,
+                    `price: "${post.price}"`,
+                    `buyLink: "${post.buyLink}"`,
+                    `summary: "${post.summary.replace(/"/g, '\\"')}"`,
+                    "---",
+                    "",
+                    post.content,
+                  ].join("\n");
+
+                  fs.writeFileSync(filePath, frontmatter, "utf8");
+                  console.log(`Created: ${post.slug}.md`);
+                  created++;
+                }
+
+                console.log(`Done: ${created} new posts created.`);
+              } catch (err) {
+                console.error("Error processing response:", err.message);
+                process.exit(1);
+              }
+            });
+          });
+
+          req.on("error", (err) => {
+            console.error("Request error:", err.message);
+            process.exit(1);
+          });
+
+          req.write(requestBody);
+          req.end();
+          NODEJS_SCRIPT
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git diff --quiet && git diff --staged --quiet && echo "no_changes=true" >> $GITHUB_OUTPUT || echo "no_changes=false" >> $GITHUB_OUTPUT
+
+      - name: Commit and push new posts
+        if: steps.changes.outputs.no_changes == 'false'
+        run: |
+          git config --global user.name "TrendRadar Bot"
+          git config --global user.email "bot@trendradar365.com"
+          git add content/posts/
+          git commit -m "🤖 Daily trend posts: $(date +'%Y-%m-%d')"
+          git push
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: No new posts
+        if: steps.changes.outputs.no_changes == 'true'
+        run: echo "No new posts to commit today."
