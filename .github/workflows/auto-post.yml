@@ -58,7 +58,7 @@ jobs:
           - 3개 모두 서로 다른 카테고리/분야에서 선택`;
 
           const requestBody = JSON.stringify({
-            model: "claude-3-opus-20240229",
+            model: "claude-opus-4-6",
             max_tokens: 4096,
             messages: [{ role: "user", content: prompt }],
           });
