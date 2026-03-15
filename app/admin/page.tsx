@@ -65,7 +65,7 @@ export default function AdminPage() {
       }));
       setPosts(postList.reverse());
       setMode("list");
-    } catch (err) { alert("포스트 로드 실패"); }
+    } catch (err: any) { console.error("Load Error:", err); alert("포스트 로드 실패: " + (err?.message || String(err))); }
     finally { setLoadingPosts(false); }
   }
 
@@ -90,7 +90,7 @@ export default function AdminPage() {
       });
       setSelectedPost(post);
       setMode("edit");
-    } catch (err) { alert("포스트 로드 실패"); }
+    } catch (err: any) { console.error("Load Error:", err); alert("포스트 로드 실패: " + (err?.message || String(err))); }
     finally { setLoadingPosts(false); }
   }
 
@@ -107,7 +107,7 @@ export default function AdminPage() {
       });
       if (res.ok) { setResult({ ok: true, message: `✅ "${post.title}" 삭제 완료!` }); loadPosts(); }
       else { setResult({ ok: false, message: "❌ 삭제 실패" }); }
-    } catch (err) { setResult({ ok: false, message: "❌ 오류 발생" }); }
+    } catch (err: any) { console.error("Delete Error:", err); setResult({ ok: false, message: `❌ 오류: ${err?.message || String(err)}` }); }
     finally { setSubmitting(false); }
   }
 
@@ -136,7 +136,7 @@ export default function AdminPage() {
         setSelectedPost(null);
         setMode("create");
       } else { const err = await res.json(); setResult({ ok: false, message: `❌ 오류: ${err.message}` }); }
-    } catch (err) { setResult({ ok: false, message: "❌ 네트워크 오류" }); }
+    } catch (err: any) { console.error("Admin Error:", err); setResult({ ok: false, message: `❌ 오류: ${err?.message || String(err)}` }); }
     finally { setSubmitting(false); }
   }
 
