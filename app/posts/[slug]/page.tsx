@@ -47,11 +47,12 @@ function renderContent(content: string) {
 
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const decodedSlug = decodeURIComponent(slug);
 
   const { data: post } = await supabase
     .from("posts")
     .select("*")
-    .eq("slug", slug)
+    .eq("slug", decodedSlug)
     .single();
 
   if (!post) notFound();

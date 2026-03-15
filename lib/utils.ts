@@ -1,10 +1,10 @@
 export function slugify(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9가-힣\s-]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
-    .trim();
+    .trim() || "post";
 }
 
 export function formatDate(dateStr: string): string {
