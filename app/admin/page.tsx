@@ -31,6 +31,7 @@ export default function AdminPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [loadingPosts, setLoadingPosts] = useState(false);
+  const [currentSha, setCurrentSha] = useState<string>("");
   const [form, setForm] = useState({
     title: "", category: "테크", thumbnail: "", price: "", productCode: "", releaseDate: "", buyLink: "", summary: "", content: "",
   });
@@ -72,10 +73,14 @@ export default function AdminPage() {
     if (!ghToken) return;
     setLoadingPosts(true);
     try {
-      const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${post.path}`, { headers: { Authorization: `token ${ghToken}`, Accept: "application/vnd.github.v3.raw" } });
+      // Fetch JSON (not raw) so we can get the SHA
+      const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${post.path}`, { headers: { Authorization: `token ${ghToken}` }, cache: "no-store" });
       if (!res.ok) throw new Error("Failed");
-      const content = await res.text();
-      const lines = content.split("\n");
+      const fileData = await res.json();
+      setCurrentSha(fileData.sha); // Save SHA for later PUT request
+      // Decode base64 content
+      const rawContent = decodeURIComponent(escape(atob(fileData.content.replace(/\n/g, ""))));
+      const lines = rawContent.split("\n");
       const endIdx = lines.indexOf("---", 1);
       const frontmatter = lines.slice(1, endIdx).join("\n");
       const body = lines.slice(endIdx + 1).join("\n").trim();
@@ -119,8 +124,8 @@ export default function AdminPage() {
       const lines = ["---", `title: "${form.title.replace(/"/g, "'")}"`, `date: "${selectedPost ? selectedPost.date : today}"`, `category: "${form.category}"`, ...(form.thumbnail ? [`thumbnail: "${form.thumbnail}"`] : []), ...(form.price ? [`price: "${form.price}"`] : []), ...(form.productCode ? [`productCode: "${form.productCode}"`] : []), ...(form.releaseDate ? [`releaseDate: "${form.releaseDate}"`] : []), ...(form.buyLink ? [`buyLink: "${form.buyLink}"`] : []), `summary: "${form.summary.replace(/"/g, "'")}"`, "---", "", form.content];
       const content = lines.join("\n");
       const encoded = btoa(unescape(encodeURIComponent(content)));
-      let sha: string | undefined;
-      if (selectedPost) { const fileRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`, { headers: { Authorization: `token ${ghToken}`, "Cache-Control": "no-cache", "Pragma": "no-cache" }, cache: "no-store" }); if (fileRes.ok) { const fileData = await fileRes.json(); sha = fileData.sha; } }
+      // Use SHA saved during loadPostForEdit (no extra API call needed!)
+      const sha: string | undefined = selectedPost ? currentSha : undefined;
       const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`, {
         method: "PUT", headers: { Authorization: `token ${ghToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ message: `${selectedPost ? "✏️ 포스팅 수정" : "📝 수동 포스팅"}: ${form.title}`, content: encoded, ...(sha && { sha }) }),
