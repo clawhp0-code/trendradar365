@@ -88,7 +88,7 @@ RELEASE_DATE: YYYY-MM-DD (공식 출시일)\nBUYLINK: https://구매링크\nSUMM
               let price = await fetchPrice(priceUrl);
               if (!price) { const pr = await callClaude(`"${title}"의 한국 공식 정가를 ₩X,XXX,XXX 형식으로만 답해주세요.`); const pm = pr.match(/₩[\d,]+/); price = pm ? pm[0] : "가격 확인 필요"; }
               const md = ["---", `title: "${title.replace(/"/g,"'")}"`, `date: "${today}"`, `category: "${category}"`, `thumbnail: "${thumbnail}"`, `price: "${price}"`,
-                `releaseDate: "${releaseDate}"`, `buyLink: "${buyLink}"`, `summary: "${summary.replace(/"/g,"'")}"`, "---", "", content, "", "---", "> 💡 위 가격은 공식 판매가(정가) 기준입니다. 실제 가격은 다를 수 있습니다."].join("\n");
+                ...(releaseDate ? [`releaseDate: "${releaseDate}"`] : []), `buyLink: "${buyLink}"`, `summary: "${summary.replace(/"/g,"'")}"`, "---", "", content, "", "---", "> 💡 위 가격은 공식 판매가(정가) 기준입니다. 실제 가격은 다를 수 있습니다."].join("\n");
               fs.writeFileSync(fp, md, "utf8");
               console.log(`Created: ${slug} (${price})`);
               created++;
