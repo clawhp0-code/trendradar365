@@ -74,7 +74,7 @@ export default function AdminPage() {
     setLoadingPosts(true);
     try {
       // Fetch JSON (not raw) so we can get the SHA
-      const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${post.path}`, { headers: { Authorization: `token ${ghToken}` }, cache: "no-store" });
+      const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${post.path}`, { headers: { Authorization: `token ${ghToken}`, Accept: "application/vnd.github+json" }, cache: "no-store" });
       if (!res.ok) throw new Error("Failed");
       const fileData = await res.json();
       setCurrentSha(fileData.sha); // Save SHA for later PUT request
