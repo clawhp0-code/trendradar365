@@ -122,16 +122,6 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
               </div>
             )}
           </div>
-          {post.buy_link && (
-            <a
-              href={post.buy_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 block w-full bg-black text-white text-center text-sm font-bold py-3 rounded-xl hover:bg-red-600 transition-colors"
-            >
-              구매하기 →
-            </a>
-          )}
         </div>
       )}
 
