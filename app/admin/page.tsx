@@ -120,7 +120,7 @@ export default function AdminPage() {
       const content = lines.join("\n");
       const encoded = btoa(unescape(encodeURIComponent(content)));
       let sha: string | undefined;
-      if (selectedPost) { const fileRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`, { headers: { Authorization: `token ${ghToken}` } }); if (fileRes.ok) { sha = (await fileRes.json()).sha; } }
+      if (selectedPost) { const fileRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`, { headers: { Authorization: `token ${ghToken}`, "Cache-Control": "no-cache", "Pragma": "no-cache" }, cache: "no-store" }); if (fileRes.ok) { const fileData = await fileRes.json(); sha = fileData.sha; } }
       const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`, {
         method: "PUT", headers: { Authorization: `token ${ghToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ message: `${selectedPost ? "✏️ 포스팅 수정" : "📝 수동 포스팅"}: ${form.title}`, content: encoded, ...(sha && { sha }) }),
