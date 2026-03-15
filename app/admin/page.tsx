@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 
+const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "trendradar2026!";
 const REPO_OWNER = "clawhp0-code";
 const REPO_NAME = "trendradar365";
@@ -24,6 +25,7 @@ function slugify(text: string): string {
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
+  const [username, setUsername] = useState("");
   const [pw, setPw] = useState("");
   const [pwError, setPwError] = useState(false);
   const [ghToken, setGhToken] = useState("");
@@ -57,7 +59,7 @@ export default function AdminPage() {
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (pw === ADMIN_PASSWORD) {
+    if (username === ADMIN_USERNAME && pw === ADMIN_PASSWORD) {
       setAuthed(true);
       setPwError(false);
     } else {
@@ -300,13 +302,21 @@ export default function AdminPage() {
             <p className="text-sm text-gray-400 mt-1">TrendRadar 365 Admin</p>
           </div>
           <input
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="사용자 이름"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 mb-3"
+          />
+          <input
             type="password"
             value={pw}
             onChange={(e) => setPw(e.target.value)}
             placeholder="비밀번호 입력"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 mb-3"
           />
-          {pwError && <p className="text-red-500 text-sm mb-3">❌ 비밀번호가 틀렸습니다.</p>}
+          {pwError && <p className="text-red-500 text-sm mb-3">❌ 사용자 이름 또는 비밀번호가 틀렸습니다.</p>}
           <button
             type="submit"
             className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-colors"
@@ -344,361 +354,18 @@ export default function AdminPage() {
         ) : (
           <div className="flex gap-2">
             <input
-              type="password"
-              value={ghToken}
-              onChange={(e) => setGhToken(e.target.value)}
-              placeholder="ghp_xxxxxxxxxxxx"
-              className="flex-1 border border-blue-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-            <button
-              onClick={saveToken}
-              className="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors"
-            >
-              저장
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Mode Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-200">
-        <button
-          onClick={() => {
-            setMode("create");
-            setSelectedPost(null);
-            setForm({
-              title: "",
-              category: "테크",
-              thumbnail: "",
-              price: "",
-              productCode: "",
-              releaseDate: "",
-              buyLink: "",
-              summary: "",
-              content: "",
-            });
-          }}
-          className={`px-4 py-2 font-bold transition-colors ${
-            mode === "create"
-              ? "text-red-600 border-b-2 border-red-600"
-              : "text-gray-400 hover:text-gray-600"
-          }`}
-        >
-          ✍️ 새 포스팅
-        </button>
-        <button
-          onClick={loadPosts}
-          className={`px-4 py-2 font-bold transition-colors ${
-            mode === "list" || mode === "edit"
-              ? "text-red-600 border-b-2 border-red-600"
-              : "text-gray-400 hover:text-gray-600"
-          }`}
-        >
-          📋 기존 포스팅
-        </button>
-      </div>
-
-      {/* Result Message */}
-      {result && (
-        <div
-          className={`p-4 rounded-xl mb-6 text-sm font-medium ${
-            result.ok
-              ? "bg-green-50 text-green-700 border border-green-200"
-              : "bg-red-50 text-red-700 border border-red-200"
-          }`}
-        >
-          {result.message}
-        </div>
-      )}
-
-      {/* List Mode */}
-      {mode === "list" && (
-        <div>
-          {loadingPosts ? (
-            <p className="text-center text-gray-400">⏳ 로드 중...</p>
-          ) : posts.length === 0 ? (
-            <p className="text-center text-gray-400">포스팅이 없습니다.</p>
-          ) : (
-            <div className="space-y-2">
-              {posts.map((post) => (
-                <div
-                  key={post.name}
-                  className="flex items-center justify-between bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
-                >
-                  <div>
-                    <p className="font-bold text-gray-900">{post.title}</p>
-                    <p className="text-xs text-gray-400">{post.date}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => loadPostForEdit(post)}
-                      className="bg-blue-600 text-white text-sm font-bold px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      ✏️ 수정
-                    </button>
-                    <button
-                      onClick={() => deletePost(post)}
-                      disabled={submitting}
-                      className="bg-red-600 text-white text-sm font-bold px-3 py-2 rounded-lg hover:bg-red-700 disabled:bg-gray-300 transition-colors"
-                    >
-                      🗑️ 삭제
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Edit Mode */}
-      {mode === "edit" && selectedPost && (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-4">
-            <p className="text-sm text-purple-700 font-medium">✏️ 수정 중: {selectedPost.title}</p>
-          </div>
-
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">제목 *</label>
-            <input
-              required
-              value={form.title}
-              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-            />
-          </div>
-
-          {/* Category */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">카테고리 *</label>
-            <select
-              value={form.category}
-              onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-            >
-              <option value="테크">💻 테크</option>
-              <option value="라이프스타일">🌿 라이프스타일</option>
-            </select>
-          </div>
-
-          {/* Thumbnail */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">썸네일 URL</label>
-            <input
-              value={form.thumbnail}
-              onChange={(e) => setForm((p) => ({ ...p, thumbnail: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-            />
-          </div>
-
-          {/* Price / Product Code / Release Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">가격</label>
-              <input
-                value={form.price}
-                onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">제품 코드</label>
-              <input
-                value={form.productCode}
-                onChange={(e) => setForm((p) => ({ ...p, productCode: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">출시일</label>
-              <input
-                type="date"
-                value={form.releaseDate}
-                onChange={(e) => setForm((p) => ({ ...p, releaseDate: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-              />
-            </div>
-          </div>
-
-          {/* Buy Link */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">구매 링크</label>
-            <input
-              value={form.buyLink}
-              onChange={(e) => setForm((p) => ({ ...p, buyLink: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-            />
-          </div>
-
-          {/* Summary */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">한 줄 요약 *</label>
-            <input
-              required
-              value={form.summary}
-              onChange={(e) => setForm((p) => ({ ...p, summary: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-            />
-          </div>
-
-          {/* Content */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">본문 (마크다운) *</label>
-            <textarea
-              required
-              value={form.content}
-              onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
-              rows={10}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-400 resize-y"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white font-bold py-4 rounded-xl transition-colors text-base shadow-sm"
-            >
-              {submitting ? "⏳ 처리 중..." : "✏️ 수정 완료!"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode("list");
-                setSelectedPost(null);
-              }}
-              className="px-6 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded-xl transition-colors"
-            >
-              취소
-            </button>
-          </div>
-
-          <p className="text-center text-xs text-gray-400">
-            약 2-3분 내에 trendradar365.com에 반영됩니다.
-          </p>
-        </form>
-      )}
-
-      {/* Create Mode */}
-      {mode === "create" && (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">제목 *</label>
-            <input
-              required
-              value={form.title}
-              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder="예: 삼성 갤럭시 S25 Ultra"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-            />
-          </div>
-
-          {/* Category */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">카테고리 *</label>
-            <select
-              value={form.category}
-              onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-            >
-              <option value="테크">💻 테크</option>
-              <option value="라이프스타일">🌿 라이프스타일</option>
-            </select>
-          </div>
-
-          {/* Thumbnail */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">썸네일 URL</label>
-            <input
-              value={form.thumbnail}
-              onChange={(e) => setForm((p) => ({ ...p, thumbnail: e.target.value }))}
-              placeholder="https://images.unsplash.com/..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-            />
-          </div>
-
-          {/* Price / Product Code / Release Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">가격</label>
-              <input
-                value={form.price}
-                onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
-                placeholder="₩999,000"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">제품 코드</label>
-              <input
-                value={form.productCode}
-                onChange={(e) => setForm((p) => ({ ...p, productCode: e.target.value }))}
-                placeholder="SM-S928N"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">출시일</label>
-              <input
-                type="date"
-                value={form.releaseDate}
-                onChange={(e) => setForm((p) => ({ ...p, releaseDate: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-              />
-            </div>
-          </div>
-
-          {/* Buy Link */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">구매 링크</label>
-            <input
-              value={form.buyLink}
-              onChange={(e) => setForm((p) => ({ ...p, buyLink: e.target.value }))}
-              placeholder="https://..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-            />
-          </div>
-
-          {/* Summary */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">한 줄 요약 *</label>
-            <input
-              required
-              value={form.summary}
-              onChange={(e) => setForm((p) => ({ ...p, summary: e.target.value }))}
-              placeholder="이 제품의 핵심을 2-3문장으로 요약"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-            />
-          </div>
-
-          {/* Content */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">본문 (마크다운) *</label>
-            <textarea
-              required
-              value={form.content}
-              onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
-              placeholder="## 상세 설명&#10;마크다운 형식으로 작성하세요."
-              rows={10}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-400 resize-y"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white font-bold py-4 rounded-xl transition-colors text-base shadow-sm"
-          >
-            {submitting ? "⏳ 포스팅 중..." : "🚀 지금 포스팅하기!"}
-          </button>
-
-          <p className="text-center text-xs text-gray-400">
-            포스팅 후 약 2-3분 내에 trendradar365.com에 자동 반영됩니다.
-          </p>
-        </form>
-      )}
-    </div>
-  );
-}
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="사용자 이름"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 mb-3"
+          />
+          <input
+            type="password"
+            value={pw}
+            onChange={(e) => setPw(e.target.value)}
+            placeholder="비밀번호 입력"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 mb-3"
+          />
+          {pwError && <p className="text-red-500 text-sm mb-3">❌ 사용자 이름 또는 비밀번호가 틀렸습니다.</p>}
