@@ -99,14 +99,16 @@ export default function AdminPage() {
     if (!ghToken) return;
     setSubmitting(true);
     try {
-      const fileRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${post.path}`, { headers: { Authorization: `token ${ghToken}` } });
+      const fileRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${post.path}`, { headers: { Authorization: `token ${ghToken}`, Accept: "application/vnd.github+json" } });
+      if (!fileRes.ok) throw new Error(`SHA 조회 실패: ${fileRes.status}`);
       const fileData = await fileRes.json();
+      if (!fileData.sha) throw new Error("SHA를 가져올 수 없습니다.");
       const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${post.path}`, {
         method: "DELETE", headers: { Authorization: `token ${ghToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ message: `🗑️ 포스팅 삭제: ${post.title}`, sha: fileData.sha }),
       });
       if (res.ok) { setResult({ ok: true, message: `✅ "${post.title}" 삭제 완료!` }); loadPosts(); }
-      else { setResult({ ok: false, message: "❌ 삭제 실패" }); }
+      else { const err = await res.json(); setResult({ ok: false, message: `❌ 삭제 실패: ${err.message}` }); }
     } catch (err: any) { console.error("Delete Error:", err); setResult({ ok: false, message: `❌ 오류: ${err?.message || String(err)}` }); }
     finally { setSubmitting(false); }
   }
@@ -125,10 +127,11 @@ export default function AdminPage() {
       const content = lines.join("\n");
       const encoded = btoa(unescape(encodeURIComponent(content)));
       // Use SHA saved during loadPostForEdit (no extra API call needed!)
-      const sha: string | undefined = selectedPost ? currentSha : undefined;
+      const sha: string | undefined = (selectedPost && currentSha) ? currentSha : undefined;
+      if (selectedPost && !sha) throw new Error("수정에 필요한 SHA가 없습니다. 포스팅 목록을 새로고침 후 다시 시도해주세요.");
       const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`, {
         method: "PUT", headers: { Authorization: `token ${ghToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `${selectedPost ? "✏️ 포스팅 수정" : "📝 수동 포스팅"}: ${form.title}`, content: encoded, ...(sha && { sha }) }),
+        body: JSON.stringify({ message: `${selectedPost ? "✏️ 포스팅 수정" : "📝 수동 포스팅"}: ${form.title}`, content: encoded, ...(sha ? { sha } : {}) }),
       });
       if (res.ok) {
         setResult({ ok: true, message: `✅ "${form.title}" ${selectedPost ? "수정" : "포스팅"} 완료! 약 2-3분 후 반영됩니다.` });
