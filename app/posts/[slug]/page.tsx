@@ -17,7 +17,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post) return {};
-
   return {
     title: post.title,
     description: post.summary,
@@ -78,17 +77,23 @@ export default async function PostPage({ params }: Props) {
         </div>
       )}
 
-      <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-2xl p-6 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-gray-500 mb-1">현재 가격</p>
-          <p className="text-3xl font-extrabold text-red-600">{post.price}</p>
+      {/* Price & Release Date Info Box — no buy button */}
+      <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-2xl p-6 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+          <div>
+            <p className="text-xs text-gray-400 mb-1">공식 판매가 (정가)</p>
+            <p className="text-3xl font-extrabold text-red-600">{post.price}</p>
+          </div>
+          {post.releaseDate && (
+            <div className="sm:border-l sm:border-red-100 sm:pl-6">
+              <p className="text-xs text-gray-400 mb-1">공식 출시일</p>
+              <p className="text-lg font-bold text-gray-800">📅 {post.releaseDate}</p>
+            </div>
+          )}
         </div>
-        {post.buyLink && (
-          <a href={post.buyLink} target="_blank" rel="noopener noreferrer"
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-xl transition-colors shadow-sm hover:shadow-md text-base whitespace-nowrap">
-            🛒 지금 구매하기
-          </a>
-        )}
+        <p className="text-xs text-gray-400 mt-3">
+          💡 위 가격은 공식 판매가(정가) 기준입니다. 실제 구매 시 가격이 다를 수 있습니다.
+        </p>
       </div>
 
       {post.contentHtml && (

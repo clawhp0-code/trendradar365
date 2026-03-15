@@ -14,6 +14,7 @@ export interface PostFrontmatter {
   price: string;
   buyLink: string;
   summary: string;
+  releaseDate?: string;
 }
 
 export interface Post extends PostFrontmatter {
