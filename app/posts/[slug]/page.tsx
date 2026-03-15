@@ -90,6 +90,12 @@ export default async function PostPage({ params }: Props) {
               <p className="text-lg font-bold text-gray-800">📅 {post.releaseDate}</p>
             </div>
           )}
+          {post.productCode && (
+            <div className="sm:border-l sm:border-red-100 sm:pl-6">
+              <p className="text-xs text-gray-400 mb-1">제품 코드</p>
+              <p className="text-lg font-bold text-gray-800 font-mono">🔖 {post.productCode}</p>
+            </div>
+          )}
         </div>
         <p className="text-xs text-gray-400 mt-3">
           💡 위 가격은 공식 판매가(정가) 기준입니다. 실제 구매 시 가격이 다를 수 있습니다.
