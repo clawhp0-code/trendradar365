@@ -3,7 +3,7 @@ title: "애플 iPhone 17e — 2026년 가성비 아이폰의 새 기준"
 date: "2026-03-15"
 category: "테크"
 thumbnail: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=800&q=80"
-price: "₩899,000"
+price: "₩990,000"
 buyLink: "https://www.apple.com/kr/iphone/"
 summary: "애플이 2026년 첫 번째 보급형 아이폰 iPhone 17e를 출시했습니다. A16 칩과 48MP 카메라를 탑재하면서도 100만원 이하 가격대를 유지해 가성비 아이폰의 새로운 기준을 세웠습니다."
 ---
