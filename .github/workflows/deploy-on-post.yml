@@ -19,7 +19,7 @@ jobs:
           node-version: "20"
 
       - name: Install & Build
-        run: npm ci && npm run build
+        run: npm install --legacy-peer-deps && npm run build
 
       - name: Deploy to Cloudflare Pages
         env:
