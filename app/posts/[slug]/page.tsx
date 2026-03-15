@@ -30,6 +30,17 @@ function renderContent(content: string) {
       result.push(<blockquote key={i}>{line.slice(2)}</blockquote>);
     } else if (line.trim() === "") {
       // skip empty lines
+    } else if (/^!\[.*?\]\(.*?\)$/.test(line.trim())) {
+      // Image: ![alt](url)
+      const match = line.match(/^!\[(.*?)\]\((.*?)\)$/);
+      if (match) {
+        result.push(
+          <img key={i} src={match[2]} alt={match[1] || "이미지"}
+            className="rounded-xl w-full my-4 border border-gray-100" />
+        );
+      }
+    } else if (line.startsWith("---")) {
+      result.push(<hr key={i} className="my-6 border-gray-200" />);
     } else {
       // Handle **bold** inline
       const parts = line.split(/(\*\*[^*]+\*\*)/g);
