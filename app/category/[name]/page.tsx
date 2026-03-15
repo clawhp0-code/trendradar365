@@ -12,6 +12,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ name:
     .from("posts")
     .select("*")
     .eq("category", category)
+    .eq("is_published", true)
     .order("published_at", { ascending: false });
 
   return (

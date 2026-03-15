@@ -11,6 +11,7 @@ async function isAuthed(): Promise<boolean> {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const category = searchParams.get("category");
+  const admin = await isAuthed();
 
   let query = supabase
     .from("posts")
@@ -18,6 +19,7 @@ export async function GET(req: NextRequest) {
     .order("published_at", { ascending: false });
 
   if (category) query = query.eq("category", category);
+  if (!admin) query = query.eq("is_published", true);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

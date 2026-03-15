@@ -223,6 +223,21 @@ export default function AdminPage() {
     else showToast(false, "삭제 실패");
   }
 
+  async function handleTogglePublish(post: Post) {
+    const next = !post.is_published;
+    const res = await fetch(`/api/posts/${post.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_published: next }),
+    });
+    if (res.ok) {
+      showToast(true, next ? "공개로 변경됐습니다." : "비공개로 변경됐습니다.");
+      loadPosts();
+    } else {
+      showToast(false, "변경 실패");
+    }
+  }
+
   if (!authed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -304,11 +319,20 @@ export default function AdminPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-full">{post.category}</span>
                       {post.price && <span className="text-xs font-bold text-red-600">{post.price}</span>}
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${post.is_published ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+                        {post.is_published ? "공개" : "비공개"}
+                      </span>
                     </div>
                     <p className="font-bold text-gray-900 truncate">{post.title}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{new Date(post.published_at).toLocaleDateString("ko-KR")}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={() => handleTogglePublish(post)}
+                      className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${post.is_published ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-green-50 text-green-700 hover:bg-green-600 hover:text-white"}`}
+                    >
+                      {post.is_published ? "비공개" : "공개"}
+                    </button>
                     <button
                       onClick={() => startEdit(post)}
                       className="px-4 py-2 bg-gray-900 text-white text-sm font-bold rounded-lg hover:bg-gray-700 transition-colors"

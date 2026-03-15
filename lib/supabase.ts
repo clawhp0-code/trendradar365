@@ -15,6 +15,7 @@ export type Post = {
   published_at: string;
   created_at: string;
   updated_at: string;
+  is_published: boolean;
 };
 
 export const supabase = createClient(

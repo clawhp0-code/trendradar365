@@ -7,6 +7,7 @@ export default async function HomePage() {
   const { data: posts } = await supabase
     .from("posts")
     .select("*")
+    .eq("is_published", true)
     .order("published_at", { ascending: false })
     .limit(20);
 
