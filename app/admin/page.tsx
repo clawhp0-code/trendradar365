@@ -48,23 +48,83 @@ export default function AdminPage() {
     setUploadingThumb(false);
   }
 
+  function htmlTableToMarkdown(html: string): string {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const table = doc.querySelector("table");
+    if (!table) return "";
+    const rows = Array.from(table.querySelectorAll("tr")).map((row) =>
+      Array.from(row.querySelectorAll("td, th")).map((cell) =>
+        (cell.textContent ?? "").trim().replace(/\|/g, "\\|")
+      )
+    );
+    if (rows.length === 0) return "";
+    const header = `| ${rows[0].join(" | ")} |`;
+    const sep = `| ${rows[0].map(() => "---").join(" | ")} |`;
+    const body = rows.slice(1).map((row) => `| ${row.join(" | ")} |`).join("\n");
+    return [header, sep, ...(body ? [body] : [])].join("\n");
+  }
+
+  function tsvToMarkdown(tsv: string): string {
+    const rows = tsv.trim().split(/\r?\n/).map((row) =>
+      row.split("\t").map((cell) => cell.trim().replace(/\|/g, "\\|"))
+    );
+    if (rows.length === 0) return tsv;
+    const header = `| ${rows[0].join(" | ")} |`;
+    const sep = `| ${rows[0].map(() => "---").join(" | ")} |`;
+    const body = rows.slice(1).map((row) => `| ${row.join(" | ")} |`).join("\n");
+    return [header, sep, ...(body ? [body] : [])].join("\n");
+  }
+
   async function handleContentPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
-    const items = e.clipboardData.items;
-    const imageItem = Array.from(items).find((item) => item.type.startsWith("image/"));
+    // Priority 1: Excel HTML table → markdown table
+    const html = e.clipboardData.getData("text/html");
+    if (html && /<table/i.test(html)) {
+      e.preventDefault();
+      const markdown = htmlTableToMarkdown(html);
+      if (contentRef.current && markdown) {
+        const el = contentRef.current;
+        const start = el.selectionStart;
+        const end = el.selectionEnd;
+        const insert = "\n" + markdown + "\n";
+        setForm((p) => ({ ...p, content: p.content.slice(0, start) + insert + p.content.slice(end) }));
+        setTimeout(() => { el.selectionStart = el.selectionEnd = start + insert.length; }, 0);
+      }
+      return;
+    }
+
+    // Priority 2: Tab-separated text (Excel fallback)
+    const text = e.clipboardData.getData("text/plain");
+    if (text && text.includes("\t")) {
+      e.preventDefault();
+      const markdown = tsvToMarkdown(text);
+      if (contentRef.current && markdown) {
+        const el = contentRef.current;
+        const start = el.selectionStart;
+        const end = el.selectionEnd;
+        const insert = "\n" + markdown + "\n";
+        setForm((p) => ({ ...p, content: p.content.slice(0, start) + insert + p.content.slice(end) }));
+        setTimeout(() => { el.selectionStart = el.selectionEnd = start + insert.length; }, 0);
+      }
+      return;
+    }
+
+    // Priority 3: Pure image paste (screenshot)
+    const items = Array.from(e.clipboardData.items);
+    const imageItem = items.find((item) => item.type.startsWith("image/"));
     if (!imageItem) return;
     e.preventDefault();
     setUploadingContent(true);
     const file = imageItem.getAsFile();
-    if (!file) return;
+    if (!file) { setUploadingContent(false); return; }
     const url = await uploadImage(file);
     if (url && contentRef.current) {
       const el = contentRef.current;
       const start = el.selectionStart;
       const end = el.selectionEnd;
-      const markdown = `![이미지](${url})`;
-      const newContent = form.content.slice(0, start) + markdown + form.content.slice(end);
-      setForm((p) => ({ ...p, content: newContent }));
-      setTimeout(() => { el.selectionStart = el.selectionEnd = start + markdown.length; }, 0);
+      const mdImg = `![이미지](${url})`;
+      setForm((p) => ({ ...p, content: p.content.slice(0, start) + mdImg + p.content.slice(end) }));
+      setTimeout(() => { el.selectionStart = el.selectionEnd = start + mdImg.length; }, 0);
     }
     setUploadingContent(false);
   }

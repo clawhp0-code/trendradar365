@@ -41,6 +41,38 @@ function renderContent(content: string) {
       }
     } else if (line.startsWith("---")) {
       result.push(<hr key={i} className="my-6 border-gray-200" />);
+    } else if (line.startsWith("|")) {
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].startsWith("|")) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      const parseRow = (row: string) => row.split("|").slice(1, -1).map((cell) => cell.trim());
+      const headers = parseRow(tableLines[0]);
+      const bodyRows = tableLines.slice(2);
+      result.push(
+        <div key={i} className="overflow-x-auto my-4">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr>
+                {headers.map((h, j) => (
+                  <th key={j} className="border border-gray-200 bg-gray-50 px-3 py-2 text-left font-bold">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {bodyRows.map((row, j) => (
+                <tr key={j}>
+                  {parseRow(row).map((cell, k) => (
+                    <td key={k} className="border border-gray-200 px-3 py-2">{cell}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
     } else {
       // Handle **bold** inline
       const parts = line.split(/(\*\*[^*]+\*\*)/g);
