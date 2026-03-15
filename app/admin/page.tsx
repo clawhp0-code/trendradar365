@@ -30,7 +30,7 @@ export default function AdminPage() {
   const [tokenSaved, setTokenSaved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
-  const [mode, setMode] = useState<"create" | "edit" | "list">("create");
+  const [mode, setMode] = useState<"create" | "list" | "edit">("create");
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [loadingPosts, setLoadingPosts] = useState(false);
@@ -165,6 +165,13 @@ export default function AdminPage() {
 
     setSubmitting(true);
     try {
+      const fileRes = await fetch(
+        `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${post.path}`,
+        { headers: { Authorization: `token ${ghToken}` } }
+      );
+      const fileData = await fileRes.json();
+      const sha = fileData.sha;
+
       const res = await fetch(
         `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${post.path}`,
         {
@@ -172,12 +179,7 @@ export default function AdminPage() {
           headers: { Authorization: `token ${ghToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             message: `🗑️ 포스팅 삭제: ${post.title}`,
-            sha: (
-              await fetch(
-                `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${post.path}`,
-                { headers: { Authorization: `token ${ghToken}` } }
-              ).then((r) => r.json())
-            ).sha,
+            sha,
           }),
         }
       );
@@ -214,7 +216,7 @@ export default function AdminPage() {
       const lines = [
         "---",
         `title: "${form.title.replace(/"/g, "'")}"`,
-        `date: "${selectedPost ? (selectedPost.date || today) : today}"`,
+        `date: "${selectedPost ? selectedPost.date : today}"`,
         `category: "${form.category}"`,
         ...(form.thumbnail ? [`thumbnail: "${form.thumbnail}"`] : []),
         ...(form.price ? [`price: "${form.price}"`] : []),
@@ -230,23 +232,22 @@ export default function AdminPage() {
       const content = lines.join("\n");
       const encoded = btoa(unescape(encodeURIComponent(content)));
 
-      const getSHA = async () => {
-        if (!selectedPost) return undefined;
-        const r = await fetch(
+      let sha: string | undefined;
+      if (selectedPost) {
+        const fileRes = await fetch(
           `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`,
           { headers: { Authorization: `token ${ghToken}` } }
         );
-        if (r.ok) return (await r.json()).sha;
-        return undefined;
-      };
-
-      const sha = await getSHA();
-      const method = selectedPost ? "PUT" : "PUT";
+        if (fileRes.ok) {
+          const fileData = await fileRes.json();
+          sha = fileData.sha;
+        }
+      }
 
       const res = await fetch(
         `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`,
         {
-          method,
+          method: "PUT",
           headers: {
             Authorization: `token ${ghToken}`,
             "Content-Type": "application/json",
@@ -411,7 +412,7 @@ export default function AdminPage() {
       )}
 
       {/* List Mode */}
-      {(mode === "list" || mode === "edit") && mode !== "create" && (
+      {mode === "list" && (
         <div>
           {loadingPosts ? (
             <p className="text-center text-gray-400">⏳ 로드 중...</p>
@@ -433,14 +434,14 @@ export default function AdminPage() {
                       onClick={() => loadPostForEdit(post)}
                       className="bg-blue-600 text-white text-sm font-bold px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                     >
-                      수정
+                      ✏️ 수정
                     </button>
                     <button
                       onClick={() => deletePost(post)}
                       disabled={submitting}
                       className="bg-red-600 text-white text-sm font-bold px-3 py-2 rounded-lg hover:bg-red-700 disabled:bg-gray-300 transition-colors"
                     >
-                      삭제
+                      🗑️ 삭제
                     </button>
                   </div>
                 </div>
@@ -450,8 +451,137 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Form Mode */}
-      {mode === "create" || (mode === "edit" && selectedPost) ? (
+      {/* Edit Mode */}
+      {mode === "edit" && selectedPost && (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-4">
+            <p className="text-sm text-purple-700 font-medium">✏️ 수정 중: {selectedPost.title}</p>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">제목 *</label>
+            <input
+              required
+              value={form.title}
+              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+            />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">카테고리 *</label>
+            <select
+              value={form.category}
+              onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+            >
+              <option value="테크">💻 테크</option>
+              <option value="라이프스타일">🌿 라이프스타일</option>
+            </select>
+          </div>
+
+          {/* Thumbnail */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">썸네일 URL</label>
+            <input
+              value={form.thumbnail}
+              onChange={(e) => setForm((p) => ({ ...p, thumbnail: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+            />
+          </div>
+
+          {/* Price / Product Code / Release Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">가격</label>
+              <input
+                value={form.price}
+                onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">제품 코드</label>
+              <input
+                value={form.productCode}
+                onChange={(e) => setForm((p) => ({ ...p, productCode: e.target.value }))}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">출시일</label>
+              <input
+                type="date"
+                value={form.releaseDate}
+                onChange={(e) => setForm((p) => ({ ...p, releaseDate: e.target.value }))}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+          </div>
+
+          {/* Buy Link */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">구매 링크</label>
+            <input
+              value={form.buyLink}
+              onChange={(e) => setForm((p) => ({ ...p, buyLink: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+            />
+          </div>
+
+          {/* Summary */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">한 줄 요약 *</label>
+            <input
+              required
+              value={form.summary}
+              onChange={(e) => setForm((p) => ({ ...p, summary: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+            />
+          </div>
+
+          {/* Content */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">본문 (마크다운) *</label>
+            <textarea
+              required
+              value={form.content}
+              onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
+              rows={10}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-400 resize-y"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white font-bold py-4 rounded-xl transition-colors text-base shadow-sm"
+            >
+              {submitting ? "⏳ 처리 중..." : "✏️ 수정 완료!"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode("list");
+                setSelectedPost(null);
+              }}
+              className="px-6 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded-xl transition-colors"
+            >
+              취소
+            </button>
+          </div>
+
+          <p className="text-center text-xs text-gray-400">
+            약 2-3분 내에 trendradar365.com에 반영됩니다.
+          </p>
+        </form>
+      )}
+
+      {/* Create Mode */}
+      {mode === "create" && (
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Title */}
           <div>
@@ -556,37 +686,19 @@ export default function AdminPage() {
             />
           </div>
 
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white font-bold py-4 rounded-xl transition-colors text-base shadow-sm"
-            >
-              {submitting
-                ? "⏳ 처리 중..."
-                : selectedPost
-                  ? "✏️ 포스팅 수정하기!"
-                  : "🚀 지금 포스팅하기!"}
-            </button>
-            {selectedPost && (
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("list");
-                  setSelectedPost(null);
-                }}
-                className="px-6 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded-xl transition-colors"
-              >
-                취소
-              </button>
-            )}
-          </div>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white font-bold py-4 rounded-xl transition-colors text-base shadow-sm"
+          >
+            {submitting ? "⏳ 포스팅 중..." : "🚀 지금 포스팅하기!"}
+          </button>
 
           <p className="text-center text-xs text-gray-400">
-            약 2-3분 내에 trendradar365.com에 반영됩니다.
+            포스팅 후 약 2-3분 내에 trendradar365.com에 자동 반영됩니다.
           </p>
         </form>
-      ) : null}
+      )}
     </div>
   );
 }
