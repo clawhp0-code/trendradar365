@@ -5,12 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
-export const revalidate = 60;
-
-export async function generateStaticParams() {
-  const { data } = await supabase.from("posts").select("slug");
-  return (data ?? []).map((p) => ({ slug: p.slug }));
-}
+export const revalidate = 0;
 
 function renderContent(content: string) {
   const lines = content.split("\n");
