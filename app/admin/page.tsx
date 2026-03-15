@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Post } from "@/lib/supabase";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Post, supabase } from "@/lib/supabase";
 
 const CATEGORIES = ["테크", "라이프스타일", "뷰티", "푸드", "여행", "Talk"];
 
@@ -21,10 +21,52 @@ export default function AdminPage() {
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [uploadingThumb, setUploadingThumb] = useState(false);
+  const [uploadingContent, setUploadingContent] = useState(false);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
 
   function showToast(ok: boolean, msg: string) {
     setToast({ ok, msg });
     setTimeout(() => setToast(null), 3000);
+  }
+
+  async function uploadImage(file: File): Promise<string | null> {
+    const ext = file.name.split(".").pop();
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { data, error } = await supabase.storage.from("images").upload(filename, file, { upsert: true });
+    if (error) { showToast(false, `이미지 업로드 실패: ${error.message}`); return null; }
+    const { data: urlData } = supabase.storage.from("images").getPublicUrl(data.path);
+    return urlData.publicUrl;
+  }
+
+  async function handleThumbnailUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingThumb(true);
+    const url = await uploadImage(file);
+    if (url) setForm((p) => ({ ...p, thumbnail: url }));
+    setUploadingThumb(false);
+  }
+
+  async function handleContentPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const items = e.clipboardData.items;
+    const imageItem = Array.from(items).find((item) => item.type.startsWith("image/"));
+    if (!imageItem) return;
+    e.preventDefault();
+    setUploadingContent(true);
+    const file = imageItem.getAsFile();
+    if (!file) return;
+    const url = await uploadImage(file);
+    if (url && contentRef.current) {
+      const el = contentRef.current;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const markdown = `![이미지](${url})`;
+      const newContent = form.content.slice(0, start) + markdown + form.content.slice(end);
+      setForm((p) => ({ ...p, content: newContent }));
+      setTimeout(() => { el.selectionStart = el.selectionEnd = start + markdown.length; }, 0);
+    }
+    setUploadingContent(false);
   }
 
   const loadPosts = useCallback(async () => {
@@ -259,10 +301,19 @@ export default function AdminPage() {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-sm font-bold text-gray-700 mb-1.5">썸네일 URL</label>
-              <input value={form.thumbnail} onChange={(e) => setForm((p) => ({ ...p, thumbnail: e.target.value }))}
-                placeholder="https://..."
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">썸네일</label>
+              <div className="flex gap-2 items-center">
+                <input value={form.thumbnail} onChange={(e) => setForm((p) => ({ ...p, thumbnail: e.target.value }))}
+                  placeholder="URL 직접 입력 또는 파일 업로드"
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+                <label className={`shrink-0 cursor-pointer px-4 py-3 rounded-xl text-sm font-bold border transition-colors ${uploadingThumb ? "bg-gray-100 text-gray-400" : "bg-gray-900 text-white hover:bg-red-600"}`}>
+                  {uploadingThumb ? "업로드 중..." : "파일 선택"}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload} disabled={uploadingThumb} />
+                </label>
+              </div>
+              {form.thumbnail && (
+                <img src={form.thumbnail} alt="썸네일 미리보기" className="mt-2 h-24 rounded-xl object-cover border border-gray-100" />
+              )}
             </div>
 
             <div>
@@ -291,8 +342,14 @@ export default function AdminPage() {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-sm font-bold text-gray-700 mb-1.5">본문 (마크다운) *</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                본문 (마크다운) *
+                <span className="ml-2 text-xs font-normal text-gray-400">이미지 붙여넣기(Cmd+V) 가능</span>
+                {uploadingContent && <span className="ml-2 text-xs text-red-500 font-bold">이미지 업로드 중...</span>}
+              </label>
               <textarea required value={form.content} onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
+                onPaste={handleContentPaste}
+                ref={contentRef}
                 rows={14}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-400 resize-y" />
             </div>
