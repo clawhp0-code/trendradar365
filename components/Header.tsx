@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-const CATEGORIES = ["전체", "테크", "라이프스타일", "뷰티", "푸드", "여행"];
+const CATEGORIES = ["전체", "테크", "라이프스타일", "뷰티", "푸드", "여행", "Talk"];
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);

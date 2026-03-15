@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Post } from "@/lib/supabase";
 
-const CATEGORIES = ["테크", "라이프스타일", "뷰티", "푸드", "여행"];
+const CATEGORIES = ["테크", "라이프스타일", "뷰티", "푸드", "여행", "Talk"];
 
 const EMPTY_FORM = {
   title: "", category: "테크", thumbnail: "", price: "",
